@@ -1,183 +1,335 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>叁學院：AI 旗艦粒子互動系統</title>
-    <link href="https://fonts.googleapis.com/css2?family=Corinthia:wght@400;700&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>叁學院｜AI 聖誕樹驚喜魔法體驗 </title>
+  <link href="https://fonts.googleapis.com/css2?family=Corinthia:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    body { margin: 0; overflow: hidden; background: #000; font-family: 'Segoe UI', sans-serif; }
+    #canvas-container { position: fixed; inset: 0; z-index: 1; }
+    #video-preview { position: fixed; left: 16px; bottom: 16px; width: clamp(100px, 25vw, 160px); aspect-ratio: 4/3; border-radius: 14px; transform: scaleX(-1); border: 2px solid rgba(255,255,255,0.18); z-index: 10; object-fit: cover; opacity: 0.55; }
     
-    <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #000; font-family: sans-serif; }
-        #canvas-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
-        
-        #xmas-text {
-            position: absolute; top: 10%; left: 50%; transform: translateX(-50%);
-            color: #fff; font-family: 'Corinthia', cursive; font-size: 15vw; z-index: 5;
-            text-shadow: 0 0 20px #ff4d4d; pointer-events: none; transition: 0.5s; text-align: center; width: 100%;
-        }
-        @media (min-width: 768px) { #xmas-text { font-size: 110px; } }
+    #big-title { position: fixed; top: 1vh; left: 50%; transform: translateX(-50%); z-index: 13; pointer-events: none; font-family: "Corinthia", cursive; color: #ffffff; font-size: clamp(55px, 14vw, 130px); text-shadow: 0 0 15px rgba(255, 60, 60, 0.9); white-space: nowrap; }
+    #text-layer { position: fixed; top: clamp(160px, 28vh, 230px); left: 50%; transform: translateX(-50%); z-index: 12; width: 90vw; text-align: center; pointer-events: none; color: rgba(255,255,255,0.92); font-weight: bold; letter-spacing: 2px; font-size: 14px; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
 
-        #overlay {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8); display: flex; flex-direction: column;
-            justify-content: center; align-items: center; z-index: 100; color: white;
-        }
-        #start-btn {
-            padding: 20px 40px; font-size: 20px; background: #22ff88; border: none;
-            border-radius: 50px; font-weight: bold; cursor: pointer; box-shadow: 0 0 20px #22ff88;
-        }
+    #ui-panel { position: fixed; top: 16px; right: 16px; width: 260px; padding: 16px; background: rgba(20,20,35,0.85); backdrop-filter: blur(10px); border-radius: 16px; border: 1px solid rgba(255,255,255,0.12); color: #fff; z-index: 100; transition: 0.3s ease; }
+    @media (max-width: 600px) { #ui-panel { transform: translateX(calc(100% + 20px)); } #ui-panel.show { transform: translateX(0); } }
+    #ui-toggle { position: fixed; top: 16px; right: 16px; width: 44px; height: 44px; background: rgba(34,255,136,0.9); border-radius: 12px; display: none; align-items: center; justify-content: center; z-index: 101; cursor: pointer; }
+    @media (max-width: 600px) { #ui-toggle { display: flex; } }
+    
+    .color-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+    .cbtn { width: 24px; height: 24px; border-radius: 50%; border: 2px solid #fff; cursor: pointer; }
+    .toggle-row { display:flex; align-items:center; justify-content:space-between; margin-top: 10px; }
+    .switch { width: 44px; height: 24px; background: rgba(255,255,255,0.14); border-radius: 999px; position: relative; cursor: pointer; }
+    .knob { width: 18px; height: 18px; border-radius: 50%; background: #fff; position: absolute; top: 3px; left: 3px; transition: 0.2s; }
+    .switch.on .knob { left: 23px; background: #22ff88; }
+    
+    #status { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff; z-index: 200; background: #000; text-align: center; transition: opacity 0.5s; }
+    #start-btn { margin-top: 24px; padding: 16px 40px; border-radius: 50px; border: 0; background: #22ff88; font-weight: 800; cursor: pointer; font-size: 20px; box-shadow: 0 0 20px rgba(34,255,136,0.5); color: #000; }
 
-        .ui-panel {
-            position: absolute; z-index: 10; background: rgba(20,20,35,0.7);
-            padding: 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); color: white;
-        }
-        #left-ui { top: 20px; left: 10px; width: 120px; }
-        #right-ui { top: 20px; right: 10px; width: 120px; }
-        
-        .btn { width: 100%; padding: 8px; margin-top: 5px; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; background: rgba(255,255,255,0.1); color: white; font-size: 11px; cursor: pointer; }
-        .btn.active { background: #6c5ce7; }
-
-        #video-preview { position: absolute; bottom: 10px; right: 10px; width: 100px; border-radius: 8px; transform: scaleX(-1); border: 1px solid #6c5ce7; z-index: 10; opacity: 0.7; }
-        #photo-popup { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0); width: 85vw; max-width: 350px; border: 8px solid #fff; border-radius: 15px; z-index: 100; transition: 0.6s; }
-        #photo-popup.show { transform: translate(-50%, -50%) scale(1); }
-    </style>
+    #reveal-card { position: fixed; left: 50%; top: 55%; transform: translate(-50%, -50%) scale(0.9); width: min(85vw, 380px); background: rgba(10,10,18,0.72); border-radius: 18px; padding: 12px; z-index: 20; opacity: 0; transition: 0.3s ease; pointer-events: none; }
+    #reveal-card.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    #reveal-card img { width: 100%; border-radius: 14px; }
+  </style>
 </head>
 <body>
 
-    <div id="overlay">
-        <h2 style="font-family: 'Corinthia', cursive; font-size: 50px; margin-bottom: 20px;">San Xue Yuan</h2>
-        <button id="start-btn">🎵 啟動魔法</button>
-        <p style="margin-top: 20px; font-size: 12px; color: #aaa;">請確保使用 HTTPS 並授權攝影機</p>
+  <div id="status">
+    <h1 style="font-family: 'Corinthia', cursive; font-size: 60px; margin: 0;"> Sum Sphere </h1>
+    <p style="opacity: 0.8; margin-top: 10px;">👋 揮手移動 | 🖐 張開解鎖 | 👌 捏合魔法 </p>
+    <button id="start-btn">🎵 啟動聖誕魔法</button>
+    <p style="margin-top: 20px; font-size: 12px; color: #aaa;">請開啟攝影機權限，才能體驗聖誕魔法喔！</p>
+  </div>
+
+  <video id="video-preview" playsinline muted></video>
+  <div id="big-title">Merry Christmas</div>
+  <div id="text-layer">手掌張開 ➜ 解鎖驚喜</div>
+
+  <div id="reveal-card">
+    <img src="./xmas.jpg" alt="Surprise" />
+    <div style="color:#fff; text-align:center; margin-top:10px; font-size:13px;">給你一個驚喜！聖誕快樂 ✨</div>
+  </div>
+
+  <audio id="bgm" src="./xmas_song.mp3" loop preload="auto"></audio>
+  
+  <div id="ui-toggle">⚙️</div>
+  <div id="ui-panel">
+    <h2 style="font-size:16px; margin:0;">✨ 燈泡色彩控制</h2>
+    <div class="color-row">
+      <div class="cbtn" style="background:#ff4d4d" data-c="#ff4d4d"></div>
+      <div class="cbtn" style="background:#ffd700" data-c="#ffd700"></div>
+      <div class="cbtn" style="background:#00AAFF" data-c="#00AAFF"></div>
+      <div class="cbtn" style="background:#ffffff" data-c="#ffffff"></div>
     </div>
-
-    <div id="xmas-text">Merry Christmas</div>
-
-    <div id="left-ui" class="ui-panel">
-        <button class="btn" onclick="changeColor('#22ff88')">經典綠</button>
-        <button class="btn" onclick="changeColor('#ff4d4d')">熱情紅</button>
-        <button class="btn" onclick="changeColor('#ffd700')">璀璨金</button>
+    <div class="toggle-row">
+      <label style="font-size:12px;">漸層模式</label>
+      <div id="gradSwitch" class="switch on"><div class="knob"></div></div>
     </div>
+    <button id="audio-btn" style="width:100%; margin-top:10px; background:rgba(34,255,136,0.3); color:#fff; border:none; padding:8px; border-radius:8px; cursor:pointer;">🔊 音樂播放中</button>
+  </div>
 
-    <div id="right-ui" class="ui-panel">
-        <button class="btn active" onclick="updateShape('tree')">🎄 聖誕樹</button>
-        <button class="btn" onclick="updateShape('heart')">❤️ 愛心</button>
-        <button class="btn" onclick="updateShape('saturn')">🪐 土星</button>
-    </div>
+  <div id="canvas-container"></div>
 
-    <video id="video-preview" playsinline></video>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+
+  <script>
+    // --- Scene Setup ---
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.Fog(0x000000, 35, 120);
+    const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    document.getElementById('canvas-container').appendChild(renderer.domElement);
+    camera.position.set(0, 3, 52);
+
+    const group = new THREE.Group();
+    scene.add(group);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+    const light = new THREE.DirectionalLight(0xffffff, 1.0);
+    light.position.set(10, 20, 10);
+    scene.add(light);
+
+    const isMobile = window.innerWidth < 600;
+    let currentBulbColor = new THREE.Color(0xff4d4d);
+    let isGradient = true;
+
+    // --- Tree Particles ---
+    const particleCount = isMobile ? 7000 : 14000;
+    const treeGeometry = new THREE.BufferGeometry();
+    const positions = new Float32Array(particleCount * 3);
+    const colors = new Float32Array(particleCount * 3);
+    const baseTargets = new Float32Array(particleCount * 3);
+    const explodedTargets = new Float32Array(particleCount * 3);
+    const yMin = -20, yMax = 16;
     
-    <img id="photo-popup" src="./my_xmas_photo.jpg.jpg" alt="Xmas Surprise">
-    <audio id="xmas_music" src="./xmas_song.mp3.m4a" loop preload="auto"></audio>
+    function radiusAtY(y) { 
+        const t = (y - yMin) / (yMax - yMin); 
+        return 15.5 * (1 - t) + 0.7; 
+    }
     
-    <div id="canvas-container"></div>
+    const treeBaseColor = new THREE.Color(0x1a5c2d);
+    const treeTopColor = new THREE.Color(0xffd700);
 
-    <script>
-        const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
-        const particleCount = isMobile ? 4000 : 12000;
+    for (let i = 0; i < particleCount; i++) {
+      const idx = i * 3;
+      const y = yMin + Math.random() * (yMax - yMin);
+      const r = radiusAtY(y);
+      const t = (y - yMin) / (yMax - yMin);
+      const angle = (t * Math.PI * 2 * 10) + (Math.random()-0.5)*0.8;
+      const x = Math.cos(angle) * r;
+      const z = Math.sin(angle) * r;
+      
+      baseTargets[idx] = x; baseTargets[idx+1] = y; baseTargets[idx+2] = z;
+      const dir = new THREE.Vector3(x, y*0.2, z).normalize();
+      explodedTargets[idx] = x + dir.x * 40; explodedTargets[idx+1] = y + dir.y * 40; explodedTargets[idx+2] = z + dir.z * 40;
+      
+      positions[idx] = x; positions[idx+1] = y; positions[idx+2] = z;
+      const col = treeBaseColor.clone().lerp(treeTopColor, t);
+      colors[idx] = col.r; colors[idx+1] = col.g; colors[idx+2] = col.b;
+    }
+    treeGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    treeGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    group.add(new THREE.Points(treeGeometry, new THREE.PointsMaterial({ size: 0.25, transparent: true, blending: THREE.AdditiveBlending, vertexColors: true })));
+
+    // --- Ribbon ---
+    const ribbonPts = [];
+    for (let i = 0; i <= 200; i++) {
+      const tt = i / 200;
+      const y = yMin + (yMax - yMin) * tt;
+      const r = radiusAtY(y) * 1.05;
+      const a = tt * Math.PI * 2 * 7.2;
+      ribbonPts.push(new THREE.Vector3(Math.cos(a)*r, y, Math.sin(a)*r));
+    }
+    const ribbonCurve = new THREE.CatmullRomCurve3(ribbonPts);
+    const ribbonMesh = new THREE.Mesh(new THREE.TubeGeometry(ribbonCurve, 200, 0.15, 8, false), new THREE.MeshStandardMaterial({ color: 0xff3333 }));
+    group.add(ribbonMesh);
+
+    // --- Bulbs ---
+    const bulbCount = 80;
+    const bulbGroup = new THREE.Group();
+    const bulbList = [];
+    const gold = new THREE.Color(0xffd700);
+
+    function updateBulbVisuals() {
+      bulbList.forEach(item => {
+        const t = (item.mesh.position.y - yMin) / (yMax - yMin);
+        const finalCol = isGradient ? currentBulbColor.clone().lerp(gold, t) : currentBulbColor;
+        item.mesh.material.color.copy(finalCol);
+        item.mesh.material.emissive.copy(finalCol);
+      });
+    }
+
+    for (let i = 0; i < bulbCount; i++) {
+      const t = Math.random();
+      const pos = ribbonCurve.getPoint(t);
+      const off = 1.3;
+      pos.x += (Math.random()-0.5)*off; pos.y += (Math.random()-0.5)*off; pos.z += (Math.random()-0.5)*off;
+      const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.38, 8, 8), new THREE.MeshStandardMaterial({ roughness: 0.1, emissiveIntensity: 0.8 }));
+      mesh.position.copy(pos);
+      bulbList.push({ mesh });
+      bulbGroup.add(mesh);
+    }
+    group.add(bulbGroup);
+    updateBulbVisuals();
+
+    // --- Star ---
+    function makeStar() {
+      const starShape = new THREE.Shape();
+      const points = 5;
+      const outerRadius = 2.5;
+      const innerRadius = 1.0;
+      for (let i = 0; i < points * 2; i++) {
+        const radius = i % 2 === 0 ? outerRadius : innerRadius;
+        const angle = (i / (points * 2)) * Math.PI * 2 - Math.PI / 2;
+        if (i === 0) starShape.moveTo(Math.cos(angle) * radius, Math.sin(angle) * radius);
+        else starShape.lineTo(Math.cos(angle) * radius, Math.sin(angle) * radius);
+      }
+      const starGeo = new THREE.ExtrudeGeometry(starShape, { depth: 0.4, bevelEnabled: false });
+      const starMesh = new THREE.Mesh(starGeo, new THREE.MeshStandardMaterial({color:0xffd700, emissive:0xffd700, emissiveIntensity:1.2}));
+      starMesh.position.y = yMax + 3.5;
+      starMesh.scale.set(0.6, 0.6, 0.6);
+      
+      const canvas = document.createElement('canvas'); canvas.width=128; canvas.height=128;
+      const ctx = canvas.getContext('2d');
+      const g = ctx.createRadialGradient(64,64,0,64,64,64); g.addColorStop(0,'rgba(255,215,0,1)'); g.addColorStop(1,'rgba(255,215,0,0)');
+      ctx.fillStyle=g; ctx.fillRect(0,0,128,128);
+      const halo = new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(canvas), blending:THREE.AdditiveBlending}));
+      halo.position.copy(starMesh.position); halo.scale.set(15,15,1);
+      return {starMesh, halo};
+    }
+    const starPack = makeStar();
+    group.add(starPack.starMesh, starPack.halo);
+
+    // --- Snow ---
+    const snowCount = isMobile ? 500 : 1000;
+    const snowGeo = new THREE.BufferGeometry();
+    const snowPos = new Float32Array(snowCount * 3);
+    for(let i=0; i<snowCount*3; i++) snowPos[i] = (Math.random()-0.5)*140;
+    snowGeo.setAttribute('position', new THREE.BufferAttribute(snowPos, 3));
+    const snow = new THREE.Points(snowGeo, new THREE.PointsMaterial({color:0xffffff, size:0.3, transparent:true, opacity:0.6}));
+    scene.add(snow);
+
+    // --- Interaction & MediaPipe ---
+    let explodeFactor = 0, targetExplode = 0;
+    let handRotation = 0, autoRotation = 0;
+
+    // [新增] 左右移動控制變數
+    let targetMoveX = 0;
+    let currentMoveX = 0;
+    
+    const hands = new Hands({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}` });
+    hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.6 });
+    hands.onResults((res) => {
+      if(res.multiHandLandmarks && res.multiHandLandmarks[0]) {
+        const h = res.multiHandLandmarks[0];
+        targetExplode = Math.hypot(h[4].x-h[20].x, h[4].y-h[20].y) > 0.35 ? 1 : 0;
+        handRotation = (h[9].x - 0.5) * Math.PI * 2;
         
-        let scene, camera, renderer, points, geometry, handScale = 1.0;
-        const targets = new Float32Array(particleCount * 3);
-        const currentPos = new Float32Array(particleCount * 3);
+        // [新增] 計算左右位移 (0.5 - h[9].x) * 範圍係數 (例如15)
+        // 因為CSS scaleX(-1) 讓預覽鏡像，所以這裡的反向邏輯會讓操作直覺：手往右、樹往右
+        targetMoveX = (0.5 - h[9].x) * 20; 
+      } else { 
+        targetExplode = 0; 
+        targetMoveX = 0; // [新增] 沒手時回到中間
+      }
+    });
 
-        function initThree() {
-            scene = new THREE.Scene();
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            renderer = new THREE.WebGLRenderer({ antialias: !isMobile, alpha: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-            document.getElementById('canvas-container').appendChild(renderer.domElement);
-            camera.position.z = isMobile ? 65 : 55;
+    function animate() {
+      requestAnimationFrame(animate);
+      autoRotation += 0.005;
+      group.rotation.y = autoRotation + handRotation;
 
-            geometry = new THREE.BufferGeometry();
-            for (let i = 0; i < particleCount * 3; i++) currentPos[i] = (Math.random() - 0.5) * 150;
-            geometry.setAttribute('position', new THREE.BufferAttribute(currentPos, 3));
-            
-            const mat = new THREE.PointsMaterial({ color: 0x22ff88, size: isMobile ? 0.4 : 0.22, transparent: true, blending: THREE.AdditiveBlending });
-            points = new THREE.Points(geometry, mat);
-            scene.add(points);
-            updateShape('tree');
-            animate();
-        }
+      // [新增] 平滑移動 X 軸位置
+      currentMoveX += (targetMoveX - currentMoveX) * 0.1;
+      group.position.x = currentMoveX;
 
-        function updateShape(type) {
-            document.querySelectorAll('#right-ui .btn').forEach(b => b.classList.remove('active'));
-            if(event) event.target.classList.add('active');
+      explodeFactor += (targetExplode - explodeFactor) * 0.1;
+      
+      const p = treeGeometry.attributes.position.array;
+      for(let i=0; i<particleCount; i++){
+        const idx = i*3;
+        const tx = baseTargets[idx] + (explodedTargets[idx]-baseTargets[idx])*explodeFactor;
+        const ty = baseTargets[idx+1] + (explodedTargets[idx+1]-baseTargets[idx+1])*explodeFactor;
+        const tz = baseTargets[idx+2] + (explodedTargets[idx+2]-baseTargets[idx+2])*explodeFactor;
+        p[idx] += (tx - p[idx])*0.15; p[idx+1] += (ty - p[idx+1])*0.15; p[idx+2] += (tz - p[idx+2])*0.15;
+      }
+      treeGeometry.attributes.position.needsUpdate = true;
+      
+      const s = 1 - explodeFactor;
+      starPack.starMesh.scale.set(0.6*s, 0.6*s, 0.6*s);
+      starPack.halo.scale.set(15*s, 15*s, 1);
+      ribbonMesh.scale.set(s, s, s); bulbGroup.scale.set(s, s, s);
+      snow.position.y -= 0.12; if(snow.position.y < -40) snow.position.y = 40;
+      
+      document.getElementById('reveal-card').classList.toggle('show', explodeFactor > 0.8);
+      starPack.starMesh.rotation.y += 0.02;
+      renderer.render(scene, camera);
+    }
 
-            for (let i = 0; i < particleCount; i++) {
-                let px, py, pz;
-                const idx = i * 3;
-                if (type === 'tree') {
-                    const h = Math.random() * 45; const r = (45 - h) * 0.45;
-                    const angle = h * 0.8 + (i % 4) * (Math.PI * 0.5);
-                    px = Math.cos(angle) * r; py = h - 22; pz = Math.sin(angle) * r;
-                } else if (type === 'heart') {
-                    const t = Math.random() * Math.PI * 2;
-                    px = 16 * Math.pow(Math.sin(t), 3); py = 13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t);
-                    pz = (Math.random() - 0.5) * 5; px *= 0.7; py *= 0.7;
-                } else {
-                    const u = Math.random(), v = Math.random();
-                    const theta = 2 * Math.PI * u, phi = Math.acos(2 * v - 1);
-                    px = 12 * Math.sin(phi) * Math.cos(theta); py = 12 * Math.sin(phi) * Math.sin(theta); pz = 12 * Math.cos(phi);
-                }
-                targets[idx] = px; targets[idx+1] = py; targets[idx+2] = pz;
-            }
-        }
+    // --- Audio & Start Control (關鍵修復) ---
+    const bgm = document.getElementById('bgm');
+    const audioBtn = document.getElementById('audio-btn');
 
-        function changeColor(hex) { if(points) points.material.color.set(hex); }
+    async function tryPlayMusic() {
+      bgm.muted = false;
+      bgm.volume = 1.0;
+      try {
+        await bgm.play();
+        audioBtn.innerHTML = "🔊 音樂播放中";
+        audioBtn.style.background = "rgba(34,255,136,0.3)";
+      } catch (e) {
+        console.warn("自動播放攔截:", e);
+        audioBtn.innerHTML = "🔈 點此開啟音樂";
+      }
+    }
 
-        function animate() {
-            requestAnimationFrame(animate);
-            const pos = geometry.attributes.position.array;
-            for (let i = 0; i < particleCount * 3; i++) {
-                const target = targets[i] * handScale;
-                pos[i] += (target - pos[i]) * 0.08;
-            }
-            geometry.attributes.position.needsUpdate = true;
-            points.rotation.y += 0.003;
-            renderer.render(scene, camera);
-        }
+    audioBtn.onclick = () => {
+      if (bgm.paused) { bgm.play(); audioBtn.innerHTML = "🔊 音樂播放中"; audioBtn.style.background = "rgba(34,255,136,0.3)"; }
+      else { bgm.pause(); audioBtn.innerHTML = "🔈 音樂已暫停"; audioBtn.style.background = "rgba(255,255,255,0.1)"; }
+    };
 
-        const startBtn = document.getElementById('start-btn');
-        startBtn.addEventListener('click', () => {
-            document.getElementById('overlay').style.display = 'none';
-            document.getElementById('xmas_music').play();
-            initThree();
-            startAI();
-        });
+    // 啟動流程優化
+    document.getElementById('start-btn').onclick = async function() {
+      // 1. 優先觸發音訊播放 (在任何異步操作之前)
+      await tryPlayMusic();
+      
+      // 2. 視覺轉場
+      document.getElementById('status').style.opacity = '0';
+      setTimeout(() => { document.getElementById('status').style.display = 'none'; }, 500);
+      
+      // 3. 啟動渲染迴圈
+      animate();
+      
+      // 4. 最後啟動相機 (避免權限彈窗中斷音訊解鎖)
+      const videoElement = document.getElementById('video-preview');
+      const cam = new Camera(videoElement, { 
+        onFrame: async () => { await hands.send({image: videoElement}); }, 
+        width: 320, height: 240 
+      });
+      cam.start();
+    };
 
-        async function startAI() {
-            const video = document.getElementById('video-preview');
-            const hands = new Hands({locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`});
-            hands.setOptions({ maxNumHands: 1, modelComplexity: 0, minDetectionConfidence: 0.5 });
-            
-            hands.onResults((results) => {
-                if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-                    const lm = results.multiHandLandmarks[0];
-                    const dist = Math.sqrt(Math.pow(lm[4].x - lm[20].x, 2) + Math.pow(lm[4].y - lm[20].y, 2));
-                    handScale = 0.6 + (dist * 3.5);
-                    if (dist > 0.4) document.getElementById('photo-popup').classList.add('show');
-                    else document.getElementById('photo-popup').classList.remove('show');
-                }
-            });
+    // UI Color Control
+    document.querySelectorAll('.cbtn').forEach(btn => {
+      btn.onclick = () => { currentBulbColor = new THREE.Color(btn.dataset.c); updateBulbVisuals(); };
+    });
 
-            const cam = new Camera(video, {
-                onFrame: async () => { await hands.send({image: video}); },
-                width: 320, height: 240
-            });
-            cam.start();
-        }
+    document.getElementById('gradSwitch').onclick = function() {
+      this.classList.toggle('on');
+      isGradient = this.classList.contains('on');
+      updateBulbVisuals();
+    };
 
-        window.addEventListener('resize', () => {
-            if(camera) {
-                camera.aspect = window.innerWidth / window.innerHeight;
-                camera.updateProjectionMatrix();
-                renderer.setSize(window.innerWidth, window.innerHeight);
-            }
-        });
-    </script>
+    document.getElementById('ui-toggle').onclick = () => document.getElementById('ui-panel').classList.toggle('show');
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
 </body>
 </html>
-
