@@ -28,9 +28,26 @@
     #status { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff; z-index: 200; background: #000; text-align: center; transition: opacity 0.5s; }
     #start-btn { margin-top: 24px; padding: 16px 40px; border-radius: 50px; border: 0; background: #22ff88; font-weight: 800; cursor: pointer; font-size: 20px; box-shadow: 0 0 20px rgba(34,255,136,0.5); color: #000; }
 
-    #reveal-card { position: fixed; left: 50%; top: 55%; transform: translate(-50%, -50%) scale(0.9); width: min(85vw, 380px); background: rgba(10,10,18,0.72); border-radius: 18px; padding: 12px; z-index: 20; opacity: 0; transition: 0.3s ease; pointer-events: none; }
-    #reveal-card.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-    #reveal-card img { width: 100%; border-radius: 14px; }
+    /* [修改] 驚喜卡片樣式：支援雙圖滾動/排列 */
+    #reveal-card { 
+      position: fixed; left: 50%; top: 55%; transform: translate(-50%, -50%) scale(0.9); 
+      width: min(90vw, 500px); /* 加寬一點以容納雙圖 */
+      background: rgba(10,10,18,0.72); border-radius: 18px; padding: 12px; 
+      z-index: 20; opacity: 0; transition: 0.3s ease; pointer-events: none; 
+      max-height: 80vh; overflow-y: auto; /* 手機版如果圖太長可以滑動 */
+    }
+    #reveal-card.show { opacity: 1; transform: translate(-50%, -50%) scale(1); pointer-events: auto; }
+    
+    /* 雙圖容器 */
+    .gallery { display: flex; gap: 8px; }
+    .gallery img { 
+      width: 100%; flex: 1; border-radius: 10px; object-fit: cover; 
+      aspect-ratio: 1/1; /* 讓圖片保持正方形，或者你可以拿掉這行 */
+    }
+    /* 手機版改為直向排列 */
+    @media (max-width: 450px) {
+        .gallery { flex-direction: column; }
+    }
 
     /* 光點特效樣式 */
     .sparkle {
@@ -60,8 +77,11 @@
   <div id="text-layer">手掌張開 ➜ 解鎖驚喜</div>
 
   <div id="reveal-card">
-    <img src="./xmas.jpg" alt="Surprise" />
-    <div style="color:#fff; text-align:center; margin-top:10px; font-size:13px;">給你一個驚喜！聖誕快樂 ✨</div>
+    <div class="gallery">
+        <img src="./xmas.jpg" alt="Surprise 1" />
+        <img src="./xmas2" alt="Surprise 2" />
+    </div>
+    <div style="color:#fff; text-align:center; margin-top:10px; font-size:13px;">給你雙倍驚喜！聖誕快樂 ✨</div>
   </div>
 
   <audio id="bgm" src="./xmas_song.mp3.m4a" loop preload="auto"></audio>
@@ -149,7 +169,7 @@
     treeGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     treeGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
     
-    // [修改點 1] 粒子尺寸由 0.25 增大至 0.48，讓外圈彩帶感更厚實
+    // [設定] 粒子厚度 0.48
     group.add(new THREE.Points(treeGeometry, new THREE.PointsMaterial({ size: 0.48, transparent: true, blending: THREE.AdditiveBlending, vertexColors: true })));
 
     // --- Ribbon ---
@@ -163,7 +183,7 @@
     }
     const ribbonCurve = new THREE.CatmullRomCurve3(ribbonPts);
     
-    // [修改點 2] 實體管道半徑由 0.45 改為 0.05 (極細金屬絲線)
+    // [設定] 極細金屬絲 0.05
     const ribbonMesh = new THREE.Mesh(new THREE.TubeGeometry(ribbonCurve, 200, 0.05, 8, false), new THREE.MeshStandardMaterial({ color: 0xff3333 }));
     group.add(ribbonMesh);
 
@@ -347,7 +367,6 @@
         const selectedColor = new THREE.Color(hex);
         currentBulbColor = selectedColor; 
 
-        // 更新粒子顏色
         const newBase = selectedColor.clone().multiplyScalar(0.25); 
         const newTop = selectedColor.clone().lerp(new THREE.Color(0xffffff), 0.2); 
 
@@ -364,10 +383,7 @@
         }
         colorsAttr.needsUpdate = true;
 
-        // 更新彩帶顏色
         ribbonMesh.material.color.copy(selectedColor);
-
-        // 更新燈泡視覺
         updateBulbVisuals();
       };
     });
