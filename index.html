@@ -31,6 +31,19 @@
     #reveal-card { position: fixed; left: 50%; top: 55%; transform: translate(-50%, -50%) scale(0.9); width: min(85vw, 380px); background: rgba(10,10,18,0.72); border-radius: 18px; padding: 12px; z-index: 20; opacity: 0; transition: 0.3s ease; pointer-events: none; }
     #reveal-card.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
     #reveal-card img { width: 100%; border-radius: 14px; }
+
+    /* [新增] 光點特效樣式 */
+    .sparkle {
+      position: fixed; pointer-events: none; z-index: 999;
+      width: 40px; height: 40px;
+      background: radial-gradient(circle, #fff 10%, #ffd700 40%, transparent 70%);
+      border-radius: 50%; mix-blend-mode: screen;
+      animation: spark-anim 0.5s ease-out forwards;
+    }
+    @keyframes spark-anim {
+      0% { transform: scale(0); opacity: 1; }
+      100% { transform: scale(2.5); opacity: 0; }
+    }
   </style>
 </head>
 <body>
@@ -213,28 +226,57 @@
     const snow = new THREE.Points(snowGeo, new THREE.PointsMaterial({color:0xffffff, size:0.3, transparent:true, opacity:0.6}));
     scene.add(snow);
 
+    // [新增] DOM 光點生成函式
+    function createSparkle(normX, normY) {
+        const s = document.createElement('div');
+        s.className = 'sparkle';
+        // 鏡像修正：MediaPipe 的 x 是 0~1，因為 scaleX(-1) 所以畫面左邊對應 x=1
+        // 計算螢幕座標
+        const x = (1 - normX) * window.innerWidth;
+        const y = normY * window.innerHeight;
+        
+        s.style.left = (x - 20) + 'px'; // -20 是為了讓光點中心對準指尖
+        s.style.top = (y - 20) + 'px';
+        document.body.appendChild(s);
+        setTimeout(() => s.remove(), 500);
+    }
+
     // --- Interaction & MediaPipe ---
     let explodeFactor = 0, targetExplode = 0;
     let handRotation = 0, autoRotation = 0;
-
-    // [新增] 左右移動控制變數
     let targetMoveX = 0;
     let currentMoveX = 0;
     
+    // [新增] 捏合冷卻時間變數
+    let lastPinchTime = 0;
+
     const hands = new Hands({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}` });
     hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.6 });
     hands.onResults((res) => {
       if(res.multiHandLandmarks && res.multiHandLandmarks[0]) {
         const h = res.multiHandLandmarks[0];
+        
+        // 1. 爆炸偵測
         targetExplode = Math.hypot(h[4].x-h[20].x, h[4].y-h[20].y) > 0.35 ? 1 : 0;
+        
+        // 2. 旋轉偵測
         handRotation = (h[9].x - 0.5) * Math.PI * 2;
         
-        // [新增] 計算左右位移 (0.5 - h[9].x) * 範圍係數 (例如15)
-        // 因為CSS scaleX(-1) 讓預覽鏡像，所以這裡的反向邏輯會讓操作直覺：手往右、樹往右
-        targetMoveX = (0.5 - h[9].x) * 20; 
+        // 3. 移動偵測
+        targetMoveX = (0.5 - h[9].x) * 20;
+
+        // 4. [新增] 捏合偵測 (拇指4 與 食指8)
+        const pinchDist = Math.hypot(h[4].x - h[8].x, h[4].y - h[8].y);
+        const now = Date.now();
+        // 距離小於 0.06 且距離上次觸發超過 150ms
+        if (pinchDist < 0.06 && now - lastPinchTime > 150) {
+            createSparkle(h[8].x, h[8].y);
+            lastPinchTime = now;
+        }
+
       } else { 
         targetExplode = 0; 
-        targetMoveX = 0; // [新增] 沒手時回到中間
+        targetMoveX = 0;
       }
     });
 
@@ -243,7 +285,6 @@
       autoRotation += 0.005;
       group.rotation.y = autoRotation + handRotation;
 
-      // [新增] 平滑移動 X 軸位置
       currentMoveX += (targetMoveX - currentMoveX) * 0.1;
       group.position.x = currentMoveX;
 
@@ -270,7 +311,7 @@
       renderer.render(scene, camera);
     }
 
-    // --- Audio & Start Control (關鍵修復) ---
+    // --- Audio & Start Control ---
     const bgm = document.getElementById('bgm');
     const audioBtn = document.getElementById('audio-btn');
 
@@ -292,19 +333,11 @@
       else { bgm.pause(); audioBtn.innerHTML = "🔈 音樂已暫停"; audioBtn.style.background = "rgba(255,255,255,0.1)"; }
     };
 
-    // 啟動流程優化
     document.getElementById('start-btn').onclick = async function() {
-      // 1. 優先觸發音訊播放 (在任何異步操作之前)
       await tryPlayMusic();
-      
-      // 2. 視覺轉場
       document.getElementById('status').style.opacity = '0';
       setTimeout(() => { document.getElementById('status').style.display = 'none'; }, 500);
-      
-      // 3. 啟動渲染迴圈
       animate();
-      
-      // 4. 最後啟動相機 (避免權限彈窗中斷音訊解鎖)
       const videoElement = document.getElementById('video-preview');
       const cam = new Camera(videoElement, { 
         onFrame: async () => { await hands.send({image: videoElement}); }, 
@@ -313,7 +346,6 @@
       cam.start();
     };
 
-    // UI Color Control
     document.querySelectorAll('.cbtn').forEach(btn => {
       btn.onclick = () => { currentBulbColor = new THREE.Color(btn.dataset.c); updateBulbVisuals(); };
     });
@@ -333,4 +365,3 @@
   </script>
 </body>
 </html>
-
