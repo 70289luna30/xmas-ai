@@ -126,7 +126,6 @@
         return 15.5 * (1 - t) + 0.7; 
     }
     
-    // 初始顏色
     const treeBaseColor = new THREE.Color(0x1a5c2d);
     const treeTopColor = new THREE.Color(0xffd700);
 
@@ -149,9 +148,11 @@
     }
     treeGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     treeGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-    group.add(new THREE.Points(treeGeometry, new THREE.PointsMaterial({ size: 0.25, transparent: true, blending: THREE.AdditiveBlending, vertexColors: true })));
+    
+    // [修改點 1] 粒子尺寸由 0.25 增大至 0.48，讓外圈彩帶感更厚實
+    group.add(new THREE.Points(treeGeometry, new THREE.PointsMaterial({ size: 0.48, transparent: true, blending: THREE.AdditiveBlending, vertexColors: true })));
 
-    // --- Ribbon (修改點1：增加厚度) ---
+    // --- Ribbon ---
     const ribbonPts = [];
     for (let i = 0; i <= 200; i++) {
       const tt = i / 200;
@@ -161,8 +162,9 @@
       ribbonPts.push(new THREE.Vector3(Math.cos(a)*r, y, Math.sin(a)*r));
     }
     const ribbonCurve = new THREE.CatmullRomCurve3(ribbonPts);
-    // [修改] 將 TubeGeometry 的半徑從 0.15 改為 0.45，增加厚重感，同時隱藏線框感
-    const ribbonMesh = new THREE.Mesh(new THREE.TubeGeometry(ribbonCurve, 200, 0.45, 8, false), new THREE.MeshStandardMaterial({ color: 0xff3333 }));
+    
+    // [修改點 2] 實體管道半徑由 0.45 改為 0.05 (極細金屬絲線)
+    const ribbonMesh = new THREE.Mesh(new THREE.TubeGeometry(ribbonCurve, 200, 0.05, 8, false), new THREE.MeshStandardMaterial({ color: 0xff3333 }));
     group.add(ribbonMesh);
 
     // --- Bulbs ---
@@ -256,16 +258,10 @@
       if(res.multiHandLandmarks && res.multiHandLandmarks[0]) {
         const h = res.multiHandLandmarks[0];
         
-        // 1. 爆炸偵測
         targetExplode = Math.hypot(h[4].x-h[20].x, h[4].y-h[20].y) > 0.35 ? 1 : 0;
-        
-        // 2. 旋轉偵測
         handRotation = (h[9].x - 0.5) * Math.PI * 2;
-        
-        // 3. 移動偵測
         targetMoveX = (0.5 - h[9].x) * 20;
 
-        // 4. 捏合偵測 (拇指4 與 食指8)
         const pinchDist = Math.hypot(h[4].x - h[8].x, h[4].y - h[8].y);
         const now = Date.now();
         if (pinchDist < 0.06 && now - lastPinchTime > 150) {
@@ -345,38 +341,33 @@
       cam.start();
     };
 
-    // [修改] UI Color Control：現在點擊顏色會同時更新粒子、彩帶和燈泡
     document.querySelectorAll('.cbtn').forEach(btn => {
       btn.onclick = () => {
         const hex = btn.dataset.c;
         const selectedColor = new THREE.Color(hex);
-        currentBulbColor = selectedColor; // 更新燈泡目標色
+        currentBulbColor = selectedColor; 
 
-        // --- 更新粒子顏色 (保持漸層) ---
-        const newBase = selectedColor.clone().multiplyScalar(0.25); // 底部較暗
-        const newTop = selectedColor.clone().lerp(new THREE.Color(0xffffff), 0.2); // 頂部稍微亮一點
+        // 更新粒子顏色
+        const newBase = selectedColor.clone().multiplyScalar(0.25); 
+        const newTop = selectedColor.clone().lerp(new THREE.Color(0xffffff), 0.2); 
 
         const colorsAttr = treeGeometry.attributes.color;
         const colorArr = colorsAttr.array;
 
         for(let i=0; i<particleCount; i++){
             const idx = i*3;
-            // 使用原始 baseTargets 的 Y 軸來計算漸層，確保爆炸時顏色不跑掉
             const y = baseTargets[idx+1];
             let t = (y - yMin) / (yMax - yMin);
-            t = Math.max(0, Math.min(1, t)); // 限制範圍
-
+            t = Math.max(0, Math.min(1, t)); 
             const col = newBase.clone().lerp(newTop, t);
-            colorArr[idx] = col.r;
-            colorArr[idx+1] = col.g;
-            colorArr[idx+2] = col.b;
+            colorArr[idx] = col.r; colorArr[idx+1] = col.g; colorArr[idx+2] = col.b;
         }
         colorsAttr.needsUpdate = true;
 
-        // --- 更新彩帶顏色 ---
+        // 更新彩帶顏色
         ribbonMesh.material.color.copy(selectedColor);
 
-        // --- 更新燈泡視覺 ---
+        // 更新燈泡視覺
         updateBulbVisuals();
       };
     });
