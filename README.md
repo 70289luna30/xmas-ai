@@ -1,28 +1,60 @@
-# 🎄 叁學院 AI 聖誕樹魔法卡片 (Template)
+# 🎄 叁學院：AI 聖誕樹魔法卡片 (Template)
 
-歡迎使用這套 AI 互動網頁模版！透過簡單的步驟，你就能擁有一個屬於自己的手勢互動聖誕卡。
+歡迎使用這套由 **叁學院** 設計的互動網頁模版！
+這不只是一張電子卡片，而是與 AI 手勢互動的驚喜體驗。
 
-## 🚀 快速開始 (如何建立網站)
-
-1. **複製模版**：
-   點擊頁面右上角的綠色按鈕 **"Use this template"** -> **"Create a new repository"**。
-   - Repository name: 取個名字 (例如: my-xmas-card)
-   - 確保選為 **Public** (公開)
-   - 點擊 **Create repository**
-
-2. **更換你的照片**：
-   - 準備一張正方形照片，命名為 `xmas.jpg` 
-   - 在你的新倉庫中，點擊 **Add file** -> **Upload files**。
-   - 將你的照片拖曳進去，確保檔名完全一樣，覆蓋原本的檔案。
-   - 點擊 **Commit changes**。
-
-3. **發布網站 (GitHub Pages)**：
-   - 點擊 **Settings** -> 左側選單 **Pages**。
-   - 在 **Build and deployment** 下方：
-     - Source: 選擇 **Deploy from a branch**
-     - Branch: 選擇 **main** (或 master) / folder 選擇 **/(root)**
-   - 點擊 **Save**。
-   - 等待約 1-2 分鐘，重新整理頁面，你會看到上方出現你的專屬網址！(例如: https://yourname.github.io/my-xmas-card/)
+## ✨ 特色功能
+- **🖐 手勢互動**：透過網頁鏡頭，張開手掌即可觸發粒子爆炸特效。
+- **🎨 雙重驚喜**：支援展示 1~2 張客製化照片（手機版自動排列）。
+- **🎵 音樂氛圍**：內建背景音樂播放功能。
+- **🖌️ 高度客製**：可自由更換照片、音樂，甚至修改標題文字。
 
 ---
-✨ Made by [叁學院]
+
+## 🚀 快速開始 (如何建立你的網站)
+
+這是一個 **GitHub Template**，你可以直接複製它來建立自己的版本：
+
+### 第一步：複製模版
+1. 點擊本頁面右上角的綠色按鈕 **"Use this template"** -> **"Create a new repository"**。
+2. **Repository name**：幫你的卡片取個英文名字 (例如: `my-xmas-gift`)。
+3. 確保選擇 **Public** (公開)。
+4. 點擊 **Create repository**。
+
+### 第二步：客製化你的內容 (照片與音樂)
+為了讓網站顯示你的照片，請依照以下規則上傳檔案：
+
+1. **準備照片**：
+   - 準備 **1 張** 正方形照片 (建議 1:1 比例)。
+   - 將照片命名為 `xmas.jpg` 。
+   
+
+2. **上傳照片**：
+   - 在你的新倉庫中，點擊 **Add file** -> **Upload files**。
+   - 將你的 `xmas.jpg` 拖曳進去。
+   - (選用) 如果想換音樂，準備一個 mp3 檔命名為 `xmas_song.mp3` 一併拖入。
+   - 等待上傳完成後，點擊下方的綠色按鈕 **Commit changes**。
+
+### 第三步：發布網站 (GitHub Pages)
+讓你的卡片變成可以分享的網址：
+
+1. 點擊上方選單的 **Settings** (設定)。
+2. 點擊左側選單的 **Pages**。
+3. 在 **Build and deployment** 區塊下：
+   - **Source**: 選擇 `Deploy from a branch`
+   - **Branch**: 選擇 `main` (或 master) / 資料夾選擇 `/(root)`
+4. 點擊 **Save**。
+5. 等待約 1-2 分鐘，重新整理該頁面，你會在上方看到你的專屬網址！
+   (例如: `https://yourname.github.io/my-xmas-gift/`)
+
+---
+
+## 🛠️ 進階修改 (給懂一點程式碼的人)
+
+如果你想修改文字內容，可以編輯 `index.html`：
+- **修改標題**：搜尋 `Sum Sphere` 或 `Merry Christmas` 替換成你想說的話。
+- **修改卡片文字**：搜尋 `給你雙倍驚喜！` 修改祝福語。
+
+---
+
+Made with ❤️ by [叁學院]
